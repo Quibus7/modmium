@@ -45,6 +45,11 @@ MILESTONE=$(grep MILESTONE /etc/lsb-release | cut -d= -f2 | tr -d '\r')
 
 # -- skidded from modmium-update.sh --
 BOARD="$(grep '^CHROMEOS_RELEASE_DESCRIPTION=' /etc/lsb-release | awk '{print $NF}')"
+
+# Fallback recovery image URLs for versions not yet in standard databases
+declare -A RECOVERY_FALLBACKS
+RECOVERY_FALLBACKS["dedede_154"]="https://dl.google.com/dl/edgedl/chromeos/recovery/chromeos_16805.31.0_dedede_recovery_stable-channel_DededeMPKeys-v59.bin.zip"
+
 getImageLink(){
   jsonLink="https://cdn.jsdelivr.net/gh/crosbreaker/chromeos-releases-data/data.json"
   echo -e "${G}Checking crosbreaker/chromeos-releases-data for recovery image URL...${N}"
@@ -58,13 +63,16 @@ getImageLink(){
     | last
     | .url // empty
     ')
-  # If no URL found in the standard data, check for known version 154 recovery image
+  
+  # If no URL found in the standard data, check for board-specific fallback
   if [[ -z $recoveryUrl ]]; then
-    if [[ $VERSION == "154" ]]; then
-      echo -e "${Y}Version 154 not in standard releases, checking fallback URL...${N}"
-      recoveryUrl="https://dl.google.com/dl/edgedl/chromeos/recovery/chromeos_16805.31.0_dedede_recovery_stable-channel_DededeMPKeys-v59.bin.zip"
+    fallback_key="${BOARD}_${VERSION}"
+    if [[ -n ${RECOVERY_FALLBACKS[$fallback_key]} ]]; then
+      echo -e "${Y}Version ${VERSION} not in standard releases, using fallback URL for ${BOARD}...${N}"
+      recoveryUrl=${RECOVERY_FALLBACKS[$fallback_key]}
     fi
   fi
+  
   if [[ -n $recoveryUrl && $recoveryUrl =~ dl\.google\.com ]]; then
     echo -e "${G}Recovery URL found!${N}"
     sleep 1
