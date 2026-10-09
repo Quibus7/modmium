@@ -58,6 +58,13 @@ getImageLink(){
     | last
     | .url // empty
     ')
+  # If no URL found in the standard data, check for known version 154 recovery image
+  if [[ -z $recoveryUrl ]]; then
+    if [[ $VERSION == "154" ]]; then
+      echo -e "${Y}Version 154 not in standard releases, checking fallback URL...${N}"
+      recoveryUrl="https://dl.google.com/dl/edgedl/chromeos/recovery/chromeos_16805.31.0_dedede_recovery_stable-channel_DededeMPKeys-v59.bin.zip"
+    fi
+  fi
   if [[ -n $recoveryUrl && $recoveryUrl =~ dl\.google\.com ]]; then
     echo -e "${G}Recovery URL found!${N}"
     sleep 1
@@ -157,7 +164,7 @@ installCros() {
   streamdir=/root/ # might as well if rootfs verification is already off ig, im keeping this as default just because i don't want to break anything - dmd
   [[ $QUICKINSTALL == $FLAGS_TRUE ]] && streamdir=/usr/local/
   curl -Lo ${streamdir}stream.py "https://modmium.dev/tools/stream.py"
-  python ${streamdir}stream.py --recovery-url "${recoveryUrl}" --kern-output "${installKern}" --root-output "${installRoot}" || fail "${R}Failed to install ChromeOS, refusing to change boot order, exiting...${N}" keepflag
+  python ${streamdir}stream.py --recovery-url "${recoveryUrl}" --kern-output "${installKern}" --root-output "${installRoot}" || fail "${R}Failed to install ChromeOS, refusing to change boot order[...]
   rm -rf .venv
   # thanks lxrd for that python script btw
   echo -e "${G}Removing verity from ChromeOS...${N}"
@@ -293,11 +300,11 @@ logo() {
     echo -e "
  ██████   ██████              █████                  ███
 ▒▒██████ ██████              ▒▒███                  ▒▒▒
- ▒███▒█████▒███   ██████   ███████  █████████████   ████  █████ ████ █████████████
- ▒███▒▒███ ▒███  ███▒▒███ ███▒▒███ ▒▒███▒▒███▒▒███ ▒▒███ ▒▒███ ▒███ ▒▒███▒▒███▒▒███
- ▒███ ▒▒▒  ▒███ ▒███ ▒███▒███ ▒███  ▒███ ▒███ ▒███  ▒███  ▒███ ▒███  ▒███ ▒███ ▒███
+ ▒███▒█████▒███   ██████   ███████  █████████████   ████  █████ ████ ██████ ▒███
+ ▒███▒▒███ ▒███  ███▒▒███ ███▒▒███ ▒▒███▒▒███▒▒███ ▒▒███ ▒▒███ ▒███ ▒▒█████▒███
+ ▒███ ▒▒▒  ▒███ ▒███ ▒███▒███ ▒███  ▒███ ▒███ ▒███  ▒███  ▒███ ▒███  ▒███ ▒███
  ▒███      ▒███ ▒███ ▒███▒███ ▒███  ▒███ ▒███ ▒███  ▒███  ▒███ ▒███  ▒███ ▒███ ▒███
- █████     █████▒▒██████ ▒▒████████ █████▒███ █████ █████ ▒▒████████ █████▒███ █████
+ █████     █████▒▒██████ ▒▒████████ █████▒███ █████ █████ ▒▒████████ ████████ █████
 ▒▒▒▒▒     ▒▒▒▒▒  ▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒ ▒▒▒▒▒ ▒▒▒▒▒   ▒▒▒▒▒▒▒▒ ▒▒▒▒▒ ▒▒▒ ▒▒▒▒▒
 "
     echo -e $menu_text
@@ -316,7 +323,7 @@ checkWP(){
       echo -e "WP range non-zero, checking for HWWP."
       if [[ $(crossystem wpsw_cur) == "0" ]]; then
         echo -e "HWWP off, attempting to disable SWWP."
-        flashrom --wp-disable || echo -e "WARNING: SWWP FAILED TO DISABLE! This is a known issue on ARM boards such as corsola and geralt. As HWWP is off, Modmium can still install, however WP must be disabled again once you wish to revert" && read -p "Press enter to continue, or Ctrl+C to abort."
+        flashrom --wp-disable || echo -e "WARNING: SWWP FAILED TO DISABLE! This is a known issue on ARM boards such as corsola and geralt. As HWWP is off, Modmium can still install, however WP mu[...]
       else
         if isti50=$(gsctool -a -I | grep AllowUnverifiedRo); then
           setting=$(echo $isti50 | awk '{print $3}')
@@ -324,13 +331,13 @@ checkWP(){
             Always)
               gsctool -a -w disable || fail "Failed to disable HWWP. Please open CCD and try again"
               crossystem wpsw_cur || grep "0" || fail "Failed to disable HWWP."
-              flashrom --wp-disable || echo -e "WARNING: SWWP FAILED TO DISABLE! This is a known issue on ARM boards such as corsola and geralt. Modmium can still install because HWWP is disabled, but you may encounter issues later." && read -p "Press enter to continue, or Ctrl+C to abort."
+              flashrom --wp-disable || echo -e "WARNING: SWWP FAILED TO DISABLE! This is a known issue on ARM boards such as corsola and geralt. Modmium can still install because HWWP is disabled[...]
               ;;
             Never)
               gsctool -a -I AllowUnverifiedRo:Always || fail "Failed to disable AP RO verification. Please open CCD and try again"
               gsctool -a -w disable || fail "Failed to disable HWWP. Please open CCD and try again"
               crossystem wpsw_cur || grep "0" || fail "Failed to disable HWWP."
-              flashrom --wp-disable || echo -e "WARNING: SWWP FAILED TO DISABLE! This is a known issue on ARM boards such as corsola and geralt. Modmium can still install because HWWP is disabled, but you may encounter issues later." && read -p "Press enter to continue, or Ctrl+C to abort."
+              flashrom --wp-disable || echo -e "WARNING: SWWP FAILED TO DISABLE! This is a known issue on ARM boards such as corsola and geralt. Modmium can still install because HWWP is disabled[...]
               ;;
             *) fail "How did we get here..?" ;;
           esac
@@ -346,7 +353,7 @@ checkAPROV(){
     setting=$(echo $isti50 | awk '{print $3}')
     case $setting in
       Always) echo -e "APROV is currently ${G}DISABLED${N}, continuing..." ;;
-      Never) fail "APROV is currently ${R}ENABLED${N}. If you're seeing this, WP is off but APROV is on and rebooting will ${R}${UN}BRICK YOUR DEVICE${RUN}${N}.\n Disable APROV immediately by running \`gsctool -a -I AllowUnverifiedRo:always\`" ;;
+      Never) fail "APROV is currently ${R}ENABLED${N}. If you're seeing this, WP is off but APROV is on and rebooting will ${R}${UN}BRICK YOUR DEVICE${RUN}${N}.\n Disable APROV immediately by run[...]
       *) fail "How did we get here..?" ;;
     esac
   else
@@ -435,7 +442,7 @@ modmiumInstall(){
     echo -e "Verifying firmware..."
     DEVFW=$(vpd -i RO_VPD -g "dev_firmware")
     if [[ $DEVFW != "1" ]]; then
-      fail "${R}Something went wrong! DevFW is not active, please join the discord and ask for help! (${Y}discord.crosbreaker.com${R})${D} \nIf you manually flashed DevFW, and Modmium cannot detect it, run 'vpd -i RO_VPD -s dev_firmware=1' to tell Modmium you are using DevFW.${N}" keepflag
+      fail "${R}Something went wrong! DevFW is not active, please join the discord and ask for help! (${Y}discord.crosbreaker.com${R})${D} \nIf you manually flashed DevFW, and Modmium cannot dete[...]
     else
       echo -e "DevFW is enabled! Continuing..."
       sleep 1
@@ -583,7 +590,7 @@ EOF
     cat <<EOF | xargs -0 echo -ne
 If everything succeeded, you are now running DevFW!
 It is highly recommended to go backup the firmware that is now in your selected drive (or directory) to the cloud, or another safe place.
-${B}Please reboot your chromebook${N}. After you reboot, either recover with a Modmium image OR run this script again to INSTALL Modmium. (If you used userkeys, make sure you also use that flag when trying to Install Modmium with this script)
+${B}Please reboot your chromebook${N}. After you reboot, either recover with a Modmium image OR run this script again to INSTALL Modmium. (If you used userkeys, make sure you also use that flag w[...]
 EOF
   else
     cat <<EOF | xargs -0 echo -ne
@@ -592,7 +599,7 @@ Starting Modmium install...
 EOF
     sync # for good luck
     sleep 2
-    modmiumInstall # we don't need to reboot because when QUICKINSTALL=1, rootfs verification on the currently booted chromeOS doesn't matter because there isn't a chance a reco image will be used, and stream.py is put in /usr/local/ instead of /root/ regardless.
+    modmiumInstall # we don't need to reboot because when QUICKINSTALL=1, rootfs verification on the currently booted chromeOS doesn't matter because there isn't a chance a reco image will be use[...]
   fi
   echo -e "Exiting..."
   sleep 0.5
